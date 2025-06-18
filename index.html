@@ -1,0 +1,21 @@
+<link rel="manifest" href="manifest.json">
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(r => console.log('SW registered', r))
+    .catch(e => console.warn('SW failed', e));
+}
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'inline-block';
+});
+function installApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(c=>deferredPrompt=null);
+  }
+}
+</script>
+<button id="installBtn" style="display:none" onclick="installApp()">📲 Ilovani o‘rnatish</button>
