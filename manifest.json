@@ -1,7 +1,7 @@
 {
   "name": "QR Kirim App",
   "short_name": "QR App",
-  "start_url": "/repo-name/",
+  "start_url": "/Savdo_analiz/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3367D6",
