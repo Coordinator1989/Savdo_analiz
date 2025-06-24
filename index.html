@@ -1,31 +1,135 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>📦 QR Chiqim</title>
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#317EFB" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <link rel="stylesheet" href="style.css" />
+    <title>QR Chiqim</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+      }
+      #reader {
+        width: 100%;
+        max-width: 400px;
+        margin: 20px auto;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6);
+        justify-content: center;
+        align-items: center;
+        z-index: 999;
+      }
+      .modal-content {
+        background: white;
+        padding: 20px;
+        width: 90%;
+        max-width: 350px;
+        border-radius: 10px;
+        text-align: left;
+      }
+      input, select {
+        width: 100%;
+        padding: 10px;
+        margin-top: 8px;
+        font-size: 16px;
+      }
+      button {
+        margin-top: 15px;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+    </style>
   </head>
   <body>
-    <h2>📦 QR Chiqim Panel</h2>
+    <h2>📦 QR orqali Chiqim qilish</h2>
     <div id="reader"></div>
-    <div id="cart"></div>
-    <button onclick="submitCart()">✅ Saqlash</button>
-
-    <!-- Modal -->
-    <div class="modal" id="productModal">
+    <div class="modal" id="modal">
       <div class="modal-content">
-        <p><b id="productName"></b></p>
-        <input id="filial" placeholder="Filial nomi" />
-        <input id="quantity" type="number" placeholder="Miqdori" />
-        <input id="price" type="number" placeholder="Sotish narxi" />
-        <button onclick="confirmProduct()">Qo‘shish</button>
+        <h3 id="modalTitle"></h3>
+        <label>📍 Filial:</label>
+        <select id="branch">
+          <option value="">Tanlang</option>
+          <option value="Filial 1">Filial 1</option>
+          <option value="Filial 2">Filial 2</option>
+          <option value="Filial 3">Filial 3</option>
+        </select>
+        <label>🔢 Miqdor:</label>
+        <input type="number" id="quantity" placeholder="Miqdor" />
+        <label>💵 Kirim narxi:</label>
+        <input type="number" id="price" placeholder="Narxi (tushgan narx)" />
+        <label>💰 Sotish narxi:</label>
+        <input type="number" id="salePrice" placeholder="Sotish narxi" />
+        <button onclick="submitProduct()">✅ Saqlash</button>
       </div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+      let current = {};
+      const modal = document.getElementById("modal");
+      const qr = new Html5Qrcode("reader");
+
+      function startScan() {
+        Html5Qrcode.getCameras().then(cameras => {
+          const backCam = cameras.find(cam => cam.label.toLowerCase().includes("back")) || cameras[0];
+          qr.start(backCam.id, { fps: 10, qrbox: 250 }, onScanSuccess);
+        });
+      }
+
+      function onScanSuccess(decodedText) {
+        qr.stop();
+        current.code = decodedText;
+        google.script.run.withSuccessHandler(showModal).getProductInfo(decodedText);
+      }
+
+      function showModal(info) {
+        if (!info) {
+          alert("❌ Mahsulot katalogda yo‘q. Iltimos, avval mahsulotni qo‘shing.");
+          startScan();
+          return;
+        }
+        current.name = info.name;
+        document.getElementById("modalTitle").innerText = `${info.name} (${info.code})`;
+        document.getElementById("price").value = info.price || "";
+        document.getElementById("salePrice").value = "";
+        document.getElementById("quantity").value = "";
+        document.getElementById("branch").value = "";
+        modal.style.display = "flex";
+      }
+
+      function submitProduct() {
+        const q = parseFloat(document.getElementById("quantity").value);
+        const p = parseFloat(document.getElementById("price").value);
+        const s = parseFloat(document.getElementById("salePrice").value);
+        const b = document.getElementById("branch").value;
+
+        if (isNaN(q) || isNaN(p) || isNaN(s) || !b) {
+          alert("❗ Hamma maydonlarni to‘g‘ri to‘ldiring!");
+          return;
+        }
+
+        google.script.run.withSuccessHandler(() => {
+          alert("✅ Mahsulot chiqimga qo‘shildi!");
+          modal.style.display = "none";
+          startScan();
+        }).saveToChiqim({
+          code: current.code,
+          name: current.name,
+          quantity: q,
+          price: p,
+          salePrice: s,
+          branch: b
+        });
+      }
+
+      window.onload = startScan;
+    </script>
   </body>
 </html>
