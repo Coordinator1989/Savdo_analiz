@@ -1,135 +1,108 @@
+/* ==== index.html ==== */
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <title>QR Chiqim</title>
-    <style>
-      body {
-        font-family: sans-serif;
-        text-align: center;
-        margin: 0;
-        padding: 0;
-      }
-      #reader {
-        width: 100%;
-        max-width: 400px;
-        margin: 20px auto;
-      }
-      .modal {
-        display: none;
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0,0,0,0.6);
-        justify-content: center;
-        align-items: center;
-        z-index: 999;
-      }
-      .modal-content {
-        background: white;
-        padding: 20px;
-        width: 90%;
-        max-width: 350px;
-        border-radius: 10px;
-        text-align: left;
-      }
-      input, select {
-        width: 100%;
-        padding: 10px;
-        margin-top: 8px;
-        font-size: 16px;
-      }
-      button {
-        margin-top: 15px;
-        padding: 10px 20px;
-        font-size: 16px;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>📦 QR orqali Chiqim qilish</h2>
-    <div id="reader"></div>
-    <div class="modal" id="modal">
-      <div class="modal-content">
-        <h3 id="modalTitle"></h3>
-        <label>📍 Filial:</label>
-        <select id="branch">
-          <option value="">Tanlang</option>
-          <option value="Filial 1">Filial 1</option>
-          <option value="Filial 2">Filial 2</option>
-          <option value="Filial 3">Filial 3</option>
-        </select>
-        <label>🔢 Miqdor:</label>
-        <input type="number" id="quantity" placeholder="Miqdor" />
-        <label>💵 Kirim narxi:</label>
-        <input type="number" id="price" placeholder="Narxi (tushgan narx)" />
-        <label>💰 Sotish narxi:</label>
-        <input type="number" id="salePrice" placeholder="Sotish narxi" />
-        <button onclick="submitProduct()">✅ Saqlash</button>
-      </div>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QR Chiqim App</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
+    #reader { width: 100%; max-width: 400px; margin: 20px auto; }
+    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+    .modal-content { background: #fff; margin: auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 360px; text-align: left; }
+    input, select { width: 100%; padding: 8px; margin: 8px 0; font-size: 16px; }
+    button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }
+    #cart { max-width: 400px; margin: 20px auto; text-align: left; }
+    .cart-item { border-bottom: 1px solid #ddd; padding: 8px 0; }
+  </style>
+</head>
+<body>
+  <h2>📦 QR orqali Chiqim</h2>
+  <div id="reader"></div>
+  <div id="cart"></div>
+  <button onclick="submitCart()">✅ Barchasini Saqlash</button>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h3 id="modalTitle"></h3>
+      <label>Filial:</label>
+      <select id="branch">
+        <option value="">-- Tanlang --</option>
+        <option>Filial 1</option>
+        <option>Filial 2</option>
+        <option>Filial 3</option>
+      </select>
+      <label>Miqdor:</label>
+      <input type="number" id="quantity" placeholder="Miqdor" />
+      <label>Kirim narxi:</label>
+      <input type="number" id="price" placeholder="Kirim narxi" />
+      <label>Sotish narxi:</label>
+      <input type="number" id="salePrice" placeholder="Sotish narxi" />
+      <button onclick="confirmProduct()">➕ Qo‘shish</button>
     </div>
+  </div>
 
-    <script>
-      let current = {};
-      const modal = document.getElementById("modal");
-      const qr = new Html5Qrcode("reader");
+  <script>
+    let cart = [], current = {};
+    const modal = document.getElementById('modal');
+    const qr = new Html5Qrcode('reader');
 
-      function startScan() {
-        Html5Qrcode.getCameras().then(cameras => {
-          const backCam = cameras.find(cam => cam.label.toLowerCase().includes("back")) || cameras[0];
-          qr.start(backCam.id, { fps: 10, qrbox: 250 }, onScanSuccess);
-        });
+    function startScanner() {
+      Html5Qrcode.getCameras().then(cams => {
+        const back = cams.find(c => c.label.toLowerCase().includes('back')) || cams[0];
+        qr.start(back.id, { fps: 10, qrbox: 250 }, onScan);
+      });
+    }
+
+    function onScan(code) {
+      qr.stop().then(() => {
+        current.code = (code || '').trim();
+        google.script.run.withSuccessHandler(showModal).getProductInfo(current.code);
+      });
+    }
+
+    function showModal(info) {
+      if (!info) {
+        alert('❌ Mahsulot katalogda yo‘q!');
+        return startScanner();
       }
+      current.name = info.name;
+      document.getElementById('modalTitle').innerText = `${info.name} (${info.code})`;
+      document.getElementById('price').value = info.price || '';
+      document.getElementById('salePrice').value = '';
+      document.getElementById('quantity').value = '';
+      document.getElementById('branch').value = '';
+      modal.style.display = 'flex';
+    }
 
-      function onScanSuccess(decodedText) {
-        qr.stop();
-        current.code = decodedText;
-        google.script.run.withSuccessHandler(showModal).getProductInfo(decodedText);
+    function confirmProduct() {
+      const q = parseFloat(document.getElementById('quantity').value);
+      const p = parseFloat(document.getElementById('price').value);
+      const s = parseFloat(document.getElementById('salePrice').value);
+      const b = document.getElementById('branch').value;
+      if (!b || isNaN(q) || isNaN(p) || isNaN(s)) {
+        return alert('❗ Iltimos, barcha maydonlarni to‘ldiring!');
       }
+      cart.push({ code: current.code, name: current.name, quantity: q, price: p, salePrice: s, branch: b });
+      modal.style.display = 'none'; renderCart(); startScanner();
+    }
 
-      function showModal(info) {
-        if (!info) {
-          alert("❌ Mahsulot katalogda yo‘q. Iltimos, avval mahsulotni qo‘shing.");
-          startScan();
-          return;
-        }
-        current.name = info.name;
-        document.getElementById("modalTitle").innerText = `${info.name} (${info.code})`;
-        document.getElementById("price").value = info.price || "";
-        document.getElementById("salePrice").value = "";
-        document.getElementById("quantity").value = "";
-        document.getElementById("branch").value = "";
-        modal.style.display = "flex";
-      }
+    function renderCart() {
+      document.getElementById('cart').innerHTML = '<h4>🛒 Savat:</h4>' + cart.map(i =>
+        `<div class="cart-item">${i.name} (${i.code}) – ${i.quantity} dona, kirim: ${i.price}, sotish: ${i.salePrice}, ${i.branch}</div>`
+      ).join('');
+    }
 
-      function submitProduct() {
-        const q = parseFloat(document.getElementById("quantity").value);
-        const p = parseFloat(document.getElementById("price").value);
-        const s = parseFloat(document.getElementById("salePrice").value);
-        const b = document.getElementById("branch").value;
+    function submitCart() {
+      if (cart.length === 0) return alert('Savat bo‘sh');
+      google.script.run.withSuccessHandler(() => {
+        alert('✅ Saqlandi!'); cart = []; renderCart();
+      }).saveToChiqim(cart);
+    }
 
-        if (isNaN(q) || isNaN(p) || isNaN(s) || !b) {
-          alert("❗ Hamma maydonlarni to‘g‘ri to‘ldiring!");
-          return;
-        }
-
-        google.script.run.withSuccessHandler(() => {
-          alert("✅ Mahsulot chiqimga qo‘shildi!");
-          modal.style.display = "none";
-          startScan();
-        }).saveToChiqim({
-          code: current.code,
-          name: current.name,
-          quantity: q,
-          price: p,
-          salePrice: s,
-          branch: b
-        });
-      }
-
-      window.onload = startScan;
-    </script>
-  </body>
+    window.onload = startScanner;
+  </script>
+</body>
 </html>
