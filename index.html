@@ -1,4 +1,3 @@
-/* ==== index.html ==== */
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -13,16 +12,12 @@
     .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: #fff; margin: auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 360px; text-align: left; }
     input, select { width: 100%; padding: 8px; margin: 8px 0; font-size: 16px; }
-    button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }
-    #cart { max-width: 400px; margin: 20px auto; text-align: left; }
-    .cart-item { border-bottom: 1px solid #ddd; padding: 8px 0; }
+    button { padding: 10px 20px; font-size: 16px; margin-top: 10px; width: 100%; }
   </style>
 </head>
 <body>
   <h2>📦 QR orqali Chiqim</h2>
   <div id="reader"></div>
-  <div id="cart"></div>
-  <button onclick="submitCart()">✅ Barchasini Saqlash</button>
 
   <div class="modal" id="modal">
     <div class="modal-content">
@@ -40,12 +35,12 @@
       <input type="number" id="price" placeholder="Kirim narxi" />
       <label>Sotish narxi:</label>
       <input type="number" id="salePrice" placeholder="Sotish narxi" />
-      <button onclick="confirmProduct()">➕ Qo‘shish</button>
+      <button onclick="confirmProduct()">✅ Tasdiqlash va Saqlash</button>
     </div>
   </div>
 
   <script>
-    let cart = [], current = {};
+    let current = {};
     const modal = document.getElementById('modal');
     const qr = new Html5Qrcode('reader');
 
@@ -65,7 +60,12 @@
 
     function showModal(info) {
       if (!info) {
-        alert('❌ Mahsulot katalogda yo‘q!');
+        if (confirm('❌ Mahsulot katalogda yo‘q! Yangi mahsulot qo‘shilsinmi?')) {
+          const name = prompt('Mahsulot nomini kiriting:');
+          if (name) {
+            google.script.run.withSuccessHandler(() => alert('✅ Qo‘shildi')).addNewProduct(current.code, name);
+          }
+        }
         return startScanner();
       }
       current.name = info.name;
@@ -85,21 +85,11 @@
       if (!b || isNaN(q) || isNaN(p) || isNaN(s)) {
         return alert('❗ Iltimos, barcha maydonlarni to‘ldiring!');
       }
-      cart.push({ code: current.code, name: current.name, quantity: q, price: p, salePrice: s, branch: b });
-      modal.style.display = 'none'; renderCart(); startScanner();
-    }
-
-    function renderCart() {
-      document.getElementById('cart').innerHTML = '<h4>🛒 Savat:</h4>' + cart.map(i =>
-        `<div class="cart-item">${i.name} (${i.code}) – ${i.quantity} dona, kirim: ${i.price}, sotish: ${i.salePrice}, ${i.branch}</div>`
-      ).join('');
-    }
-
-    function submitCart() {
-      if (cart.length === 0) return alert('Savat bo‘sh');
       google.script.run.withSuccessHandler(() => {
-        alert('✅ Saqlandi!'); cart = []; renderCart();
-      }).saveToChiqim(cart);
+        alert('✅ Chiqim saqlandi');
+        modal.style.display = 'none';
+        startScanner();
+      }).saveToChiqim({ code: current.code, name: current.name, quantity: q, price: p, salePrice: s, branch: b });
     }
 
     window.onload = startScanner;
