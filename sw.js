@@ -1,12 +1,17 @@
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open('qr-app-cache').then(cache =>
-      cache.addAll(['/', '/index.html', '/manifest.json'])
-    )
+    caches.open('qr-chiqim-v1').then(cache => {
+      return cache.addAll([
+        '/index.html',
+        '/app.js',
+        '/manifest.json'
+      ]);
+    })
   );
 });
+
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(resp => resp || fetch(event.request))
+    caches.match(event.request).then(response => response || fetch(event.request))
   );
 });
