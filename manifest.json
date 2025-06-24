@@ -1,12 +1,20 @@
 {
-  "name": "QR Kirim App",
-  "short_name": "QR App",
-  "start_url": "/Savdo_analiz/",
+  "name": "QR Chiqim App",
+  "short_name": "Chiqim",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3367D6",
+  "theme_color": "#317EFB",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
