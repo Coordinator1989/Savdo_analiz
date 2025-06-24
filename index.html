@@ -1,21 +1,31 @@
-<link rel="manifest" href="manifest.json">
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js')
-    .then(r => console.log('SW registered', r))
-    .catch(e => console.warn('SW failed', e));
-}
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById('installBtn').style.display = 'inline-block';
-});
-function installApp(){
-  if(deferredPrompt){
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(c=>deferredPrompt=null);
-  }
-}
-</script>
-<button id="installBtn" style="display:none" onclick="installApp()">📲 Ilovani o‘rnatish</button>
+<!DOCTYPE html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📦 QR Chiqim</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#317EFB" />
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h2>📦 QR Chiqim Panel</h2>
+    <div id="reader"></div>
+    <div id="cart"></div>
+    <button onclick="submitCart()">✅ Saqlash</button>
+
+    <!-- Modal -->
+    <div class="modal" id="productModal">
+      <div class="modal-content">
+        <p><b id="productName"></b></p>
+        <input id="filial" placeholder="Filial nomi" />
+        <input id="quantity" type="number" placeholder="Miqdori" />
+        <input id="price" type="number" placeholder="Sotish narxi" />
+        <button onclick="confirmProduct()">Qo‘shish</button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
