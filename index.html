@@ -1,103 +1,155 @@
-<!-- index.html (GitHub Pages uchun) -->
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#3367D6">
-    <link rel="manifest" href="manifest.json">
-    <title>QR Chiqim PWA</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-      body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
-      #reader { width: 300px; margin: 20px auto; }
-      input, select, button { margin: 5px; padding: 10px; font-size: 16px; width: 80%; }
-      .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
-      .modal-content { background: #fff; padding: 20px; border-radius: 10px; text-align: left; width: 300px; }
+      body { font-family: Arial; text-align: center; padding: 10px; }
+      #reader { width: 300px; margin: auto; }
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        width: 300px;
+        text-align: left;
+      }
+      input, select {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+        font-size: 16px;
+      }
+      button {
+        padding: 10px 15px;
+        font-size: 16px;
+        margin-top: 10px;
+      }
     </style>
   </head>
   <body>
-    <h2>📦 QR Chiqim</h2>
+    <h2>📦 QR orqali Chiqim qilish</h2>
     <div id="reader"></div>
+    <div id="result"></div>
 
-    <div class="modal" id="formModal">
+    <div class="modal" id="productModal">
       <div class="modal-content">
-        <p id="productName"></p>
-        <input type="number" id="quantity" placeholder="Miqdori">
-        <input type="number" id="price" placeholder="Narxi">
-        <input type="number" id="salePrice" placeholder="Sotish narxi">
-        <select id="filial">
-          <option value="">Filialni tanlang</option>
-        </select>
-        <button onclick="submitData()">✅ Saqlash</button>
+        <p><b id="productInfoText"></b></p>
+        <input id="quantity" type="number" placeholder="Miqdori">
+        <input id="price" type="number" placeholder="Narxi">
+        <input id="salePrice" type="number" placeholder="Sotish narxi">
+        <select id="branchSelect"></select>
+        <button onclick="confirmData()">✅ Tasdiqlash</button>
       </div>
     </div>
 
     <script>
-      let html5QrCode = new Html5Qrcode("reader");
-      let currentCode = "";
+      let html5QrCode;
+      let currentCode = '';
+      let productName = '';
 
-      async function startScanner() {
-        const backcameras = await Html5Qrcode.getCameras();
-        if (cameras.length) {
-          html5QrCode.start(cameras[0].id, { fps: 10, qrbox: 250 }, onScan);
-        }
+      function startScanner() {
+        Html5Qrcode.getCameras().then(cameras => {
+          if (cameras.length) {
+            const backCam = cameras.find(c =>
+              c.label.toLowerCase().includes("back") ||
+              c.label.toLowerCase().includes("rear") ||
+              c.label.toLowerCase().includes("zad")
+            ) || cameras[0];
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(backCam.id, { fps: 10, qrbox: 250 }, onScanSuccess);
+          } else {
+            document.getElementById("result").innerText = "❌ Kamera topilmadi";
+          }
+        }).catch(err => {
+          document.getElementById("result").innerText = "⚠️ Kamera xatosi: " + err;
+        });
       }
 
-      async function onScan(code) {
+      function onScanSuccess(decodedText) {
         html5QrCode.stop();
-        currentCode = code;
-        const response = await fetch("https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbymU3YvA0vBSQLzFm4yamw7YISAmaGnUI_9WsOxcCRk-irZJlhhFYcRKOea_ptEw3L5eA/exec/exec?code=" + code);
-        const data = await response.json();
+        currentCode = decodedText;
+        document.getElementById("result").innerText = "🔍 Tekshirilmoqda...";
 
-        if (!data.found) {
-          alert("❌ Mahsulot topilmadi. Avval katalogga qo‘shing.");
-          startScanner();
-        } else {
-          document.getElementById("productName").innerText = `${data.name} (${data.code})`;
-          document.getElementById("price").value = data.price;
-          loadFilials();
-          document.getElementById("formModal").style.display = "flex";
-        }
+        google.script.run
+          .withSuccessHandler(handleProductInfo)
+          .getProductInfoByCode(decodedText);
       }
 
-      async function loadFilials() {
-        const res = await fetch("https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbymU3YvA0vBSQLzFm4yamw7YISAmaGnUI_9WsOxcCRk-irZJlhhFYcRKOea_ptEw3L5eA/exec/exec?filials=true");
-        const list = await res.json();
-        const select = document.getElementById("filial");
-        select.innerHTML = '<option value="">Filialni tanlang</option>' + list.map(f => `<option value="${f}">${f}</option>`).join('');
-      }
-
-      async function submitData() {
-        const payload = {
-          code: currentCode,
-          quantity: document.getElementById("quantity").value,
-          price: document.getElementById("price").value,
-          salePrice: document.getElementById("salePrice").value,
-          filial: document.getElementById("filial").value
-        };
-
-        if (!payload.quantity || !payload.price || !payload.salePrice || !payload.filial) {
-          alert("Barcha maydonlarni to‘ldiring!");
+      function handleProductInfo(info) {
+        if (!info) {
+          if (confirm("🆕 Yangi mahsulot. Qo‘shilsinmi?")) {
+            const name = prompt("Mahsulot nomi:");
+            if (name) {
+              google.script.run.addNewProduct(currentCode, name);
+              alert("✅ Katalogga qo‘shildi. Qayta skanerlashni boshlang.");
+              startScanner();
+            }
+          } else {
+            startScanner();
+          }
           return;
         }
 
-        const res = await fetch("https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbymU3YvA0vBSQLzFm4yamw7YISAmaGnUI_9WsOxcCRk-irZJlhhFYcRKOea_ptEw3L5eA/exec/exec", {
-          method: "POST",
-          body: JSON.stringify(payload)
+        productName = info.name;
+        document.getElementById("productInfoText").innerText = `${info.name} (${info.code})`;
+        document.getElementById("price").value = info.price || '';
+        document.getElementById("salePrice").value = info.salePrice || '';
+        document.getElementById("quantity").value = '';
+
+        // Filiallar ro‘yxatini yuklaymiz
+        google.script.run.withSuccessHandler(fillBranches).getBranches();
+
+        document.getElementById("productModal").style.display = "flex";
+      }
+
+      function fillBranches(branches) {
+        const select = document.getElementById("branchSelect");
+        select.innerHTML = '<option value="">--Filial tanlang--</option>';
+        branches.forEach(branch => {
+          const opt = document.createElement("option");
+          opt.value = branch;
+          opt.textContent = branch;
+          select.appendChild(opt);
         });
-
-        const result = await res.text();
-        alert(result);
-        document.getElementById("formModal").style.display = "none";
-        startScanner();
       }
 
-      startScanner();
+      function confirmData() {
+        const qty = parseFloat(document.getElementById("quantity").value);
+        const price = parseFloat(document.getElementById("price").value);
+        const sale = parseFloat(document.getElementById("salePrice").value);
+        const branch = document.getElementById("branchSelect").value;
 
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
+        if (!qty || !price || !sale || !branch) {
+          alert("❗ Hammasini to‘ldiring!");
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(() => {
+            alert("✅ Saqlandi");
+            document.getElementById("productModal").style.display = "none";
+            startScanner();
+          })
+          .saveProduct({
+            code: currentCode,
+            name: productName,
+            quantity: qty,
+            price: price,
+            salePrice: sale,
+            branch: branch
+          });
       }
+
+      window.onload = startScanner;
     </script>
   </body>
 </html>
