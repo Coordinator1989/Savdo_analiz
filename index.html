@@ -1,162 +1,75 @@
+/* ==== index.html ==== */
 <!DOCTYPE html>
-<html lang="uz">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0d6efd">
-  <title>Chiqim QR App</title>
-  <link rel="manifest" href="manifest.json">
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-      background: #f9f9f9;
-    }
-    h2 { padding: 15px; background: #0d6efd; color: white; margin: 0; }
-    #reader { width: 100%; max-width: 400px; margin: 20px auto; }
-    .modal {
-      display: none;
-      position: fixed;
-      background: rgba(0,0,0,0.5);
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      width: 300px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      font-size: 16px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-  <h2>📦 QR orqali chiqim qilish</h2>
-  <div id="reader"></div>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3367D6">
+    <link rel="manifest" href="manifest.json">
+    <title>Savdo Analiz</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+      body { font-family: Arial; text-align: center; margin: 0; padding: 0; background: #f4f6f8; }
+      #reader { width: 300px; margin: 20px auto; }
+      .modal { display: none; position: fixed; background: rgba(0,0,0,0.6); top: 0; left: 0; width: 100%; height: 100%; justify-content: center; align-items: center; }
+      .modal-content { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 350px; text-align: left; }
+      input { width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; }
+      button { padding: 10px 15px; margin: 10px; font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    <h2>📦 QR orqali mahsulot tekshiruv</h2>
+    <div id="reader"></div>
 
-  <!-- Ma’lumot kiritish oynasi -->
-  <div class="modal" id="infoModal">
-    <div class="modal-content">
-      <h3 id="productName">Mahsulot:</h3>
-      <input type="number" id="quantity" placeholder="Miqdori">
-      <input type="number" id="price" placeholder="Narxi">
-      <input type="number" id="salePrice" placeholder="Sotish narxi">
-      <select id="branch">
-        <option value="">Filialni tanlang</option>
-        <option value="Filial 1">Filial 1</option>
-        <option value="Filial 2">Filial 2</option>
-        <option value="Filial 3">Filial 3</option>
-      </select>
-      <button onclick="submitData()">✅ Saqlash</button>
+    <div class="modal" id="infoModal">
+      <div class="modal-content">
+        <p><b id="productName"></b></p>
+        <input id="quantity" type="number" placeholder="Miqdor"> 
+        <input id="price" type="number" placeholder="Sotish narxi"> 
+        <button onclick="saveProduct()">✅ Saqlash</button>
+      </div>
     </div>
-  </div>
 
-  <script>
-    const serverURL = "https://script.google.com/macros/s/AKfycbywlmxZOGFyQCR2aQti3Q1QL7XjrpWk2A7IcdZv4ZjAXFO5cWqn5Ds5UvFCnFqb8i37/exec";
-    let scannedCode = "";
-    let productName = "";
+    <script>
+      let currentCode = '';
+      let html5QrCode = new Html5Qrcode("reader");
 
-    const html5QrCode = new Html5Qrcode("reader");
-
-    function startScanner() {
-      Html5Qrcode.getCameras().then(cameras => {
-        if (cameras.length) {
-          const backCamera = cameras.find(c => c.label.toLowerCase().includes("back")) || cameras[0];
-          html5QrCode.start(
-            backCamera.id,
-            { fps: 10, qrbox: 250 },
-            handleScan
-          );
-        }
-      });
-    }
-
-    function handleScan(code) {
-      html5QrCode.stop();
-      scannedCode = code;
-      fetch(`${serverURL}?action=getProduct&code=${encodeURIComponent(code)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.found) {
-            productName = data.name;
-            document.getElementById("productName").innerText = `🛍 ${data.name}`;
-            document.getElementById("price").value = data.price;
-            document.getElementById("salePrice").value = data.salePrice;
-            document.getElementById("infoModal").style.display = "flex";
-          } else {
-            if (confirm("🆕 Bu mahsulot katalogda yo‘q. Qo‘shilsinmi?")) {
-              const name = prompt("Mahsulot nomini kiriting:");
-              if (name) {
-                fetch(`${serverURL}?action=addNewProduct&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}`)
-                  .then(() => {
-                    alert("✅ Yangi mahsulot qo‘shildi. Qayta skanerlash mumkin.");
-                    startScanner();
-                  });
-              }
-            } else {
-              startScanner();
-            }
-          }
+      function startScanner() {
+        Html5Qrcode.getCameras().then(cameras => {
+          const backCam = cameras.find(c => c.label.toLowerCase().includes("back")) || cameras[0];
+          html5QrCode.start(backCam.id, { fps: 10, qrbox: 250 }, onScanSuccess);
         });
-    }
-
-    function submitData() {
-      const quantity = parseFloat(document.getElementById("quantity").value);
-      const price = parseFloat(document.getElementById("price").value);
-      const salePrice = parseFloat(document.getElementById("salePrice").value);
-      const branch = document.getElementById("branch").value;
-
-      if (!quantity || !price || !salePrice || !branch) {
-        alert("Barcha maydonlarni to‘ldiring.");
-        return;
       }
 
-      const total = quantity * price;
+      function onScanSuccess(decodedText) {
+        html5QrCode.stop();
+        currentCode = decodedText;
+        fetch("https://script.google.com/macros/s/AKfycbywlmxZOGFyQCR2aQti3Q1QL7XjrpWk2A7IcdZv4ZjAXFO5cWqn5Ds5UvFCnFqb8i37/exec?code=" + decodedText)
+          .then(res => res.json())
+          .then(data => {
+            if (!data || !data.name) {
+              alert("❌ Mahsulot topilmadi");
+              return startScanner();
+            }
+            document.getElementById("productName").innerText = `${data.name} (${data.code})`;
+            document.getElementById("quantity").value = '';
+            document.getElementById("price").value = data.salePrice || '';
+            document.getElementById("infoModal").style.display = 'flex';
+          });
+      }
 
-      const payload = new URLSearchParams({
-        action: "saveOutput",
-        code: scannedCode,
-        name: productName,
-        quantity,
-        price,
-        salePrice,
-        total,
-        branch
-      });
-
-      fetch(serverURL, {
-        method: "POST",
-        body: payload
-      })
-      .then(res => res.text())
-      .then(response => {
-        alert("✅ Ma’lumot saqlandi.");
-        document.getElementById("infoModal").style.display = "none";
-        document.getElementById("quantity").value = "";
-        document.getElementById("price").value = "";
-        document.getElementById("salePrice").value = "";
-        document.getElementById("branch").value = "";
+      function saveProduct() {
+        const qty = document.getElementById("quantity").value;
+        const price = document.getElementById("price").value;
+        alert(`✅ Mahsulot: ${currentCode}\nMiqdor: ${qty}\nNarx: ${price}`);
+        document.getElementById("infoModal").style.display = 'none';
         startScanner();
-      });
-    }
+      }
 
-    window.onload = startScanner;
-  </script>
-</body>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+
+      window.onload = startScanner;
+    </script>
+  </body>
 </html>
