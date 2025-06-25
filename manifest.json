@@ -1,10 +1,10 @@
 {
-  "name": "QR Chiqim App",
-  "short_name": "Chiqim",
-  "start_url": "index.html",
+  "name": "Savdo Analiz",
+  "short_name": "SavdoApp",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#317EFB",
+  "theme_color": "#3367D6",
   "icons": [
     {
       "src": "icon-192.png",
