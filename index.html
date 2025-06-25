@@ -1,98 +1,103 @@
+<!-- index.html (GitHub Pages uchun) -->
 <!DOCTYPE html>
-<html lang="uz">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>QR Chiqim App</title>
-  <link rel="manifest" href="manifest.json">
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body { font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
-    #reader { width: 100%; max-width: 400px; margin: 20px auto; }
-    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-    .modal-content { background: #fff; margin: auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 360px; text-align: left; }
-    input, select { width: 100%; padding: 8px; margin: 8px 0; font-size: 16px; }
-    button { padding: 10px 20px; font-size: 16px; margin-top: 10px; width: 100%; }
-  </style>
-</head>
-<body>
-  <h2>📦 QR orqali Chiqim</h2>
-  <div id="reader"></div>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#3367D6">
+    <link rel="manifest" href="manifest.json">
+    <title>QR Chiqim PWA</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+      body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
+      #reader { width: 300px; margin: 20px auto; }
+      input, select, button { margin: 5px; padding: 10px; font-size: 16px; width: 80%; }
+      .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+      .modal-content { background: #fff; padding: 20px; border-radius: 10px; text-align: left; width: 300px; }
+    </style>
+  </head>
+  <body>
+    <h2>📦 QR Chiqim</h2>
+    <div id="reader"></div>
 
-  <div class="modal" id="modal">
-    <div class="modal-content">
-      <h3 id="modalTitle"></h3>
-      <label>Filial:</label>
-      <select id="branch">
-        <option value="">-- Tanlang --</option>
-        <option>Filial 1</option>
-        <option>Filial 2</option>
-        <option>Filial 3</option>
-      </select>
-      <label>Miqdor:</label>
-      <input type="number" id="quantity" placeholder="Miqdor" />
-      <label>Kirim narxi:</label>
-      <input type="number" id="price" placeholder="Kirim narxi" />
-      <label>Sotish narxi:</label>
-      <input type="number" id="salePrice" placeholder="Sotish narxi" />
-      <button onclick="confirmProduct()">✅ Tasdiqlash va Saqlash</button>
+    <div class="modal" id="formModal">
+      <div class="modal-content">
+        <p id="productName"></p>
+        <input type="number" id="quantity" placeholder="Miqdori">
+        <input type="number" id="price" placeholder="Narxi">
+        <input type="number" id="salePrice" placeholder="Sotish narxi">
+        <select id="filial">
+          <option value="">Filialni tanlang</option>
+        </select>
+        <button onclick="submitData()">✅ Saqlash</button>
+      </div>
     </div>
-  </div>
 
-  <script>
-    let current = {};
-    const modal = document.getElementById('modal');
-    const qr = new Html5Qrcode('reader');
+    <script>
+      let html5QrCode = new Html5Qrcode("reader");
+      let currentCode = "";
 
-    function startScanner() {
-      Html5Qrcode.getCameras().then(cams => {
-        const back = cams.find(c => c.label.toLowerCase().includes('back')) || cams[0];
-        qr.start(back.id, { fps: 10, qrbox: 250 }, onScan);
-      });
-    }
-
-    function onScan(code) {
-      qr.stop().then(() => {
-        current.code = (code || '').trim();
-        google.script.run.withSuccessHandler(showModal).getProductInfo(current.code);
-      });
-    }
-
-    function showModal(info) {
-      if (!info) {
-        if (confirm('❌ Mahsulot katalogda yo‘q! Yangi mahsulot qo‘shilsinmi?')) {
-          const name = prompt('Mahsulot nomini kiriting:');
-          if (name) {
-            google.script.run.withSuccessHandler(() => alert('✅ Qo‘shildi')).addNewProduct(current.code, name);
-          }
+      async function startScanner() {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras.length) {
+          html5QrCode.start(cameras[0].id, { fps: 10, qrbox: 250 }, onScan);
         }
-        return startScanner();
       }
-      current.name = info.name;
-      document.getElementById('modalTitle').innerText = `${info.name} (${info.code})`;
-      document.getElementById('price').value = info.price || '';
-      document.getElementById('salePrice').value = '';
-      document.getElementById('quantity').value = '';
-      document.getElementById('branch').value = '';
-      modal.style.display = 'flex';
-    }
 
-    function confirmProduct() {
-      const q = parseFloat(document.getElementById('quantity').value);
-      const p = parseFloat(document.getElementById('price').value);
-      const s = parseFloat(document.getElementById('salePrice').value);
-      const b = document.getElementById('branch').value;
-      if (!b || isNaN(q) || isNaN(p) || isNaN(s)) {
-        return alert('❗ Iltimos, barcha maydonlarni to‘ldiring!');
+      async function onScan(code) {
+        html5QrCode.stop();
+        currentCode = code;
+        const response = await fetch("https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbymU3YvA0vBSQLzFm4yamw7YISAmaGnUI_9WsOxcCRk-irZJlhhFYcRKOea_ptEw3L5eA/exec/exec?code=" + code);
+        const data = await response.json();
+
+        if (!data.found) {
+          alert("❌ Mahsulot topilmadi. Avval katalogga qo‘shing.");
+          startScanner();
+        } else {
+          document.getElementById("productName").innerText = `${data.name} (${data.code})`;
+          document.getElementById("price").value = data.price;
+          loadFilials();
+          document.getElementById("formModal").style.display = "flex";
+        }
       }
-      google.script.run.withSuccessHandler(() => {
-        alert('✅ Chiqim saqlandi');
-        modal.style.display = 'none';
+
+      async function loadFilials() {
+        const res = await fetch("https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbymU3YvA0vBSQLzFm4yamw7YISAmaGnUI_9WsOxcCRk-irZJlhhFYcRKOea_ptEw3L5eA/exec/exec?filials=true");
+        const list = await res.json();
+        const select = document.getElementById("filial");
+        select.innerHTML = '<option value="">Filialni tanlang</option>' + list.map(f => `<option value="${f}">${f}</option>`).join('');
+      }
+
+      async function submitData() {
+        const payload = {
+          code: currentCode,
+          quantity: document.getElementById("quantity").value,
+          price: document.getElementById("price").value,
+          salePrice: document.getElementById("salePrice").value,
+          filial: document.getElementById("filial").value
+        };
+
+        if (!payload.quantity || !payload.price || !payload.salePrice || !payload.filial) {
+          alert("Barcha maydonlarni to‘ldiring!");
+          return;
+        }
+
+        const res = await fetch("https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbymU3YvA0vBSQLzFm4yamw7YISAmaGnUI_9WsOxcCRk-irZJlhhFYcRKOea_ptEw3L5eA/exec/exec", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.text();
+        alert(result);
+        document.getElementById("formModal").style.display = "none";
         startScanner();
-      }).saveToChiqim({ code: current.code, name: current.name, quantity: q, price: p, salePrice: s, branch: b });
-    }
+      }
 
-    window.onload = startScanner;
-  </script>
-</body>
+      startScanner();
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
+  </body>
 </html>
