@@ -38,7 +38,7 @@
       let currentCode = "";
 
       async function startScanner() {
-        const cameras = await Html5Qrcode.getCameras();
+        const backcameras = await Html5Qrcode.getCameras();
         if (cameras.length) {
           html5QrCode.start(cameras[0].id, { fps: 10, qrbox: 250 }, onScan);
         }
